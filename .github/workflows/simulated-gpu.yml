@@ -32,7 +32,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Simulated GPU (NVIDIA T4) and CUDA 12.6
-        uses: pantheongpu/pantheonsim@1cbc943807f206f9f83d0c2a4aba27f86d3d3478 # pantheonsim 335, rehearsal
+        uses: pantheongpu/pantheonsim@0bd1dd1269895552f69e61beacb1d052503198f5 # pantheonsim 335 + 336, rehearsal
         with:
           gpu: nvidia/t4
           cuda-toolkit: '12.6'
