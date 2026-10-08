@@ -27,13 +27,18 @@ jobs:
       run:
         shell: bash
     env:
-      # as in CI.yml; also let Open MPI start as root, as the container does
+      # as in CI.yml; also let Open MPI start as root if it ever does
       OMPI_MCA_btl_vader_single_copy_mechanism: "none"
-      OMPI_ALLOW_RUN_AS_ROOT: "1"
-      OMPI_ALLOW_RUN_AS_ROOT_CONFIRM: "1"
-    runs-on: ubuntu-latest
-    container: ghcr.io/ecp-copa/ci-containers/cuda:12.2.0
+    runs-on: ubuntu-24.04
     steps:
+      - name: Simulated GPU (NVIDIA T4) and CUDA 12.6
+        uses: pantheongpu/pantheonsim@5a7ed5100c2d21d67a360872600df5ae8e8bb4bf # main, rehearsal
+        with:
+          gpu: nvidia/t4
+          cuda-toolkit: '12.6'
+          library-path: false
+      - name: Install packages
+        run: sudo apt-get install -y cmake libopenmpi-dev openmpi-bin libgtest-dev
       - name: Checkout json
         uses: actions/checkout@v3
         with:
@@ -55,11 +60,13 @@ jobs:
           repository: kokkos/kokkos
           ref: 4.0.01
           path: kokkos
-      # Turing (sm_75) is the simulated T4
+      # Turing (sm_75) is the simulated T4. Kokkos' CUDA backend is built with
+      # its own nvcc_wrapper.
       - name: Build kokkos
         working-directory: kokkos
         run: |
           cmake -B build \
+            -DCMAKE_CXX_COMPILER=$PWD/bin/nvcc_wrapper \
             -DCMAKE_INSTALL_PREFIX=$HOME/kokkos \
             -DCMAKE_BUILD_TYPE=Release \
             -DKokkos_ENABLE_CUDA=ON \
@@ -72,6 +79,7 @@ jobs:
       - name: Build ExaCA
         run: |
           cmake -B build \
+            -D CMAKE_CXX_COMPILER=$HOME/kokkos/bin/nvcc_wrapper \
             -D CMAKE_INSTALL_PREFIX=$HOME/exaca \
             -D CMAKE_PREFIX_PATH="$HOME/kokkos;$HOME/json" \
             -D CMAKE_BUILD_TYPE=Release \
@@ -80,12 +88,6 @@ jobs:
             -D ExaCA_ENABLE_TESTING=ON
           cmake --build build --parallel 2
           cmake --install build
-      # After the build, so the build sees exactly the toolchain it does today.
-      - name: Simulated GPU (NVIDIA T4)
-        uses: pantheongpu/pantheonsim@5a7ed5100c2d21d67a360872600df5ae8e8bb4bf # main, rehearsal
-        with:
-          gpu: nvidia/t4
-          cuda-toolkit: none
       - name: Unit test ExaCA on the simulated GPU
         run: |
           vgpu run ctest --test-dir build --output-on-failure
