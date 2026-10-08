@@ -58,7 +58,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           repository: kokkos/kokkos
-          ref: 4.0.01
+          ref: 4.5.01
           path: kokkos
       # Turing (sm_75) is the simulated T4. Kokkos' CUDA backend is built with
       # its own nvcc_wrapper.
